@@ -1,3 +1,4 @@
+import Cookies from "js-cookie";
 import React, {
   createContext,
   ReactNode,
@@ -6,9 +7,13 @@ import React, {
   useState,
 } from "react";
 import challenges from "../../Challenges.json";
+import { LevelUpModal } from "../components/LevelUpModal";
 
 interface ChallengesProviderProps {
   children: ReactNode;
+  level: number;
+  currentExperience: number;
+  challengesCompleted: number;
 }
 
 interface Challenge {
@@ -27,20 +32,28 @@ interface ChallegensContextData {
   startNewChallenge: () => void;
   resetChallenge: () => void;
   completeChallenge: () => void;
+  closeLevelUpModal: () => void;
 }
 
 export const ChallengesContext = createContext<ChallegensContextData>(
   {} as ChallegensContextData
 );
 
-export const ChallengesProvider: React.FC = ({
+export const ChallengesProvider: React.FC<ChallengesProviderProps> = ({
   children,
+  ...rest
 }: ChallengesProviderProps) => {
-  const [level, setLevel] = useState(1);
-  const [currentExperience, setCurrentExperience] = useState(0);
-  const [challengesCompleted, setChallengesCompleted] = useState(0);
+  const [level, setLevel] = useState(rest.level ?? 1);
+  const [currentExperience, setCurrentExperience] = useState(
+    rest.currentExperience ?? 0
+  );
+  const [challengesCompleted, setChallengesCompleted] = useState(
+    rest.challengesCompleted ?? 0
+  );
 
   const [activeChallenge, setActiveChallenge] = useState(null);
+
+  const [isLevelUp, setIsLevelUp] = useState(false);
 
   const experienceToNextLevel = Math.pow((level + 1) * 4, 2);
 
@@ -48,9 +61,20 @@ export const ChallengesProvider: React.FC = ({
     Notification.requestPermission;
   }, []);
 
+  useEffect(() => {
+    Cookies.set("level", String(level));
+    Cookies.set("currentExperience", String(currentExperience));
+    Cookies.set("challengesCompleted", String(challengesCompleted));
+  }, [level, currentExperience, challengesCompleted]);
+
   const levelUp = useCallback(() => {
     setLevel(level + 1);
+    setIsLevelUp(true);
   }, [level]);
+
+  const closeLevelUpModal = () => {
+    setIsLevelUp(false);
+  };
 
   const startNewChallenge = () => {
     const randomChallengeIndex = Math.floor(Math.random() * challenges.length);
@@ -102,9 +126,11 @@ export const ChallengesProvider: React.FC = ({
         completeChallenge,
         activeChallenge,
         experienceToNextLevel,
+        closeLevelUpModal,
       }}
     >
       {children}
+      {isLevelUp && <LevelUpModal />}
     </ChallengesContext.Provider>
   );
 };
